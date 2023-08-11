@@ -6,4 +6,4 @@ A follow along of the **Your first Flutter app** tutorial from the [Flutter webs
 
 ### Add Functionality
 
-![App Demo](./app_demo.mov)
+![App Demo](./app_demo.mp4)
