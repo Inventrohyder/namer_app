@@ -44,10 +44,21 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
+  WordPair current = WordPair.random();
+
+  Set<WordPair> favorites = <WordPair>{};
 
   void getNext() {
     current = WordPair.random();
+    notifyListeners();
+  }
+
+  void toggleFavorite() {
+    if (favorites.contains(current)) {
+      favorites.remove(current);
+    } else {
+      favorites.add(current);
+    }
     notifyListeners();
   }
 }
@@ -57,9 +68,17 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
+    MyAppState appState = context.watch<MyAppState>();
 
-    var pair = appState.current;
+    WordPair pair = appState.current;
+
+    IconData icon;
+    if (appState.favorites.contains(pair)) {
+      icon = Icons.favorite;
+    } else {
+      icon = Icons.favorite_border;
+    }
+
     return Scaffold(
       body: Center(
         child: Column(
@@ -69,9 +88,22 @@ class MyHomePage extends StatelessWidget {
             const SizedBox(
               height: 10,
             ),
-            ElevatedButton(
-              onPressed: () => appState.getNext(),
-              child: const Text("Next"),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => appState.toggleFavorite(),
+                  icon: Icon(icon),
+                  label: const Text("Like"),
+                ),
+                const SizedBox(
+                  width: 10,
+                ),
+                ElevatedButton(
+                  onPressed: () => appState.getNext(),
+                  child: const Text("Next"),
+                ),
+              ],
             )
           ],
         ),
