@@ -222,7 +222,7 @@ class FavouritePage extends StatelessWidget {
   Widget build(BuildContext context) {
     MyAppState appState = context.watch<MyAppState>();
 
-    if (appState.favorites.length > 0) {
+    if (appState.favorites.isNotEmpty) {
       return Column(
         children: [
           Expanded(
