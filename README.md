@@ -6,4 +6,9 @@ A follow along of the **Your first Flutter app** tutorial from the [Flutter webs
 
 ### Add Functionality
 
-![App Demo](./app_demo.mov)
+![Add Functionality Demo](./app_demo/add_functionality_demo.mov)
+
+
+### Add Navigation Rail
+
+![Add Navigation Rail Demo](.app_demo/add_navigation_rail_demo.mov)
