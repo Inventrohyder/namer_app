@@ -12,3 +12,8 @@ A follow along of the **Your first Flutter app** tutorial from the [Flutter webs
 ### Add Navigation Rail
 
 ![Add Navigation Rail Demo](./app_demo/add_navigation_rail.mov)
+
+
+### Add a New Page
+
+![Add a New Page](./app_demo/add_a_new_page.mov)

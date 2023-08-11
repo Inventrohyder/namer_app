@@ -53,6 +53,13 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void unFavorite(WordPair pair) {
+    bool removed = favorites.remove(pair);
+    if (removed) {
+      notifyListeners();
+    }
+  }
+
   void toggleFavorite() {
     if (favorites.contains(current)) {
       favorites.remove(current);
@@ -81,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
         page = const GeneratorPage();
         break;
       case 1:
-        page = const Placeholder();
+        page = const FavouritePage();
         break;
       default:
         throw UnimplementedError("no widget for $selectedIndex");
@@ -201,6 +208,66 @@ class BigCard extends StatelessWidget {
           style: style,
           semanticsLabel: "${pair.first} ${pair.second}",
         ),
+      ),
+    );
+  }
+}
+
+class FavouritePage extends StatelessWidget {
+  const FavouritePage({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    MyAppState appState = context.watch<MyAppState>();
+
+    if (appState.favorites.length > 0) {
+      return Column(
+        children: [
+          Expanded(
+            child: ListView(
+              children: appState.favorites
+                  .map(
+                    (pair) => ListTile(
+                      trailing: IconButton(
+                        onPressed: () => appState.unFavorite(pair),
+                        icon: const Icon(
+                          Icons.delete,
+                        ),
+                      ),
+                      title: BigCard(pair: pair),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return EmptyView();
+    }
+  }
+}
+
+class EmptyView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.favorite_outline_rounded,
+            size: 100,
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          Text(
+            "No Favorites",
+          ),
+        ],
       ),
     );
   }
