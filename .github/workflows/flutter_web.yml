@@ -47,7 +47,7 @@ jobs:
         run: echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)" >> $GITHUB_ENV
       - name: Build with Flutter
         run: |
-          flutter build web --base-href '/$REPO_NAME'
+          flutter build web --base-href '/$REPO_NAME/'
         working-directory: ${{ env.BUILD_PATH }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
