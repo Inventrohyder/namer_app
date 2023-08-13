@@ -92,8 +92,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    ColorScheme colorScheme = Theme.of(context).colorScheme;
-
     Widget page;
     switch (selectedIndex) {
       case 0:
@@ -106,43 +104,44 @@ class _MyHomePageState extends State<MyHomePage> {
         throw UnimplementedError("no widget for $selectedIndex");
     }
 
-    // The container for the current page, with its background colour
-    // and subtle switching animation
-
-    ColoredBox mainArea = ColoredBox(
-      color: colorScheme.surfaceVariant,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: page,
-      ),
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
           // Use a more mobile-friendly layout with BottomNavigationBar
           // on narrow screens
-          return Scaffold(
-            body: mainArea,
-            bottomNavigationBar: NavigationBar(
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: "Home",
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.favorite_border),
-                  selectedIcon: Icon(Icons.favorite),
-                  label: "Favorites",
-                ),
-              ],
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                setState(() {
-                  selectedIndex = value;
-                });
-              },
+          return DefaultTabController(
+            length: 2, // Number of tabs
+            initialIndex: selectedIndex, // Initial selected index
+            child: Scaffold(
+              body: const TabBarView(
+                children: [
+                  AppPage(
+                    child: GeneratorPage(),
+                  ), // Replace with your first page widget
+                  AppPage(
+                    child: FavouritePage(),
+                  ), // Replace with your second page widget
+                ],
+              ),
+              bottomNavigationBar: TabBar(
+                onTap: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
+                tabs: [
+                  Tab(
+                      icon: selectedIndex == 0
+                          ? const Icon(Icons.home)
+                          : const Icon(Icons.home_outlined),
+                      text: "Home"),
+                  Tab(
+                      icon: selectedIndex == 1
+                          ? const Icon(Icons.favorite)
+                          : const Icon(Icons.favorite_border),
+                      text: "Favorites"),
+                ],
+              ),
             ),
           );
         }
@@ -176,13 +175,38 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 child: Container(
                   color: Theme.of(context).colorScheme.primaryContainer,
-                  child: mainArea,
+                  child: AppPage(
+                    child: page,
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class AppPage extends StatelessWidget {
+  const AppPage({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    ColorScheme colorScheme = Theme.of(context).colorScheme;
+    return ColoredBox(
+      color: colorScheme.surfaceVariant,
+      child: AnimatedSwitcher(
+        duration: const Duration(
+          milliseconds: 200,
+        ),
+        child: child,
+      ),
     );
   }
 }
