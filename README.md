@@ -17,3 +17,8 @@ A follow along of the **Your first Flutter app** tutorial from the [Flutter webs
 ### Add a New Page
 
 ![Add a New Page](./app_demo/add_a_new_page.mov)
+
+
+### Next Steps
+
+![Next Steps](./app_demo/next_steps.mov)

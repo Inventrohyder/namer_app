@@ -1,8 +1,9 @@
-import 'dart:developer';
-
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
+import 'package:xml/xml.dart' as xml;
 
 void main() {
   runApp(const MyApp());
@@ -45,10 +46,17 @@ class MyApp extends StatelessWidget {
 
 class MyAppState extends ChangeNotifier {
   WordPair current = WordPair.random();
+  List<WordPair> history = <WordPair>[];
+
+  GlobalKey? historyListKey;
 
   Set<WordPair> favorites = <WordPair>{};
 
   void getNext() {
+    history.insert(0, current);
+    AnimatedListState? animatedList =
+        historyListKey?.currentState as AnimatedListState?;
+    animatedList?.insertItem(0);
     current = WordPair.random();
     notifyListeners();
   }
@@ -60,11 +68,13 @@ class MyAppState extends ChangeNotifier {
     }
   }
 
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
+  void toggleFavorite({WordPair? pair}) {
+    pair ??= current;
+
+    if (favorites.contains(pair)) {
+      favorites.remove(pair);
     } else {
-      favorites.add(current);
+      favorites.add(pair);
     }
     notifyListeners();
   }
@@ -82,6 +92,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    ColorScheme colorScheme = Theme.of(context).colorScheme;
+
     Widget page;
     switch (selectedIndex) {
       case 0:
@@ -94,14 +106,53 @@ class _MyHomePageState extends State<MyHomePage> {
         throw UnimplementedError("no widget for $selectedIndex");
     }
 
+    // The container for the current page, with its background colour
+    // and subtle switching animation
+
+    ColoredBox mainArea = ColoredBox(
+      color: colorScheme.surfaceVariant,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: page,
+      ),
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          // Use a more mobile-friendly layout with BottomNavigationBar
+          // on narrow screens
+          return Scaffold(
+            body: mainArea,
+            bottomNavigationBar: NavigationBar(
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: "Home",
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.favorite_border),
+                  selectedIcon: Icon(Icons.favorite),
+                  label: "Favorites",
+                ),
+              ],
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (value) {
+                setState(() {
+                  selectedIndex = value;
+                });
+              },
+            ),
+          );
+        }
+
         return Scaffold(
           body: Row(
             children: [
               SafeArea(
                 child: NavigationRail(
-                  extended: constraints.maxWidth > 600,
+                  extended: constraints.maxWidth > 1240,
                   destinations: const [
                     NavigationRailDestination(
                       icon: Icon(Icons.home_outlined),
@@ -125,7 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 child: Container(
                   color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
+                  child: mainArea,
                 ),
               ),
             ],
@@ -157,6 +208,11 @@ class GeneratorPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const Expanded(
+            flex: 3,
+            child: HistoryListView(),
+          ),
+          const SizedBox(height: 10),
           BigCard(pair: pair),
           const SizedBox(
             height: 10,
@@ -177,8 +233,80 @@ class GeneratorPage extends StatelessWidget {
                 child: const Text("Next"),
               ),
             ],
-          )
+          ),
+          const Spacer(
+            flex: 2,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class HistoryListView extends StatefulWidget {
+  const HistoryListView({
+    super.key,
+  });
+
+  @override
+  State<HistoryListView> createState() => _HistoryListViewState();
+}
+
+class _HistoryListViewState extends State<HistoryListView> {
+  /// Needed so  that [MyAppState] can tell [AnimatedList] below to animate
+  /// new items
+
+  final _key = GlobalKey();
+
+  /// Used to 'fade out' the history items at the top to suggest continuation
+  static const Gradient _maskingGradient = LinearGradient(
+    // this gradient goes from fully transparent to fully opaque black ...
+    colors: [Colors.transparent, Colors.black],
+    // ... from the top (transparent) to half (0.5) of the way to the bottom.
+    stops: [0.0, 0.5],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = context.watch<MyAppState>();
+    appState.historyListKey = _key;
+
+    return ShaderMask(
+      shaderCallback: (bounds) => _maskingGradient.createShader(bounds),
+      //This blend mode takes the opacity of the shader (i.e our gradient)
+      //and applies it to the destination (i.e our animated list
+      blendMode: BlendMode.dstIn,
+      child: AnimatedList(
+        key: _key,
+        reverse: true,
+        padding: const EdgeInsets.only(top: 100),
+        initialItemCount: appState.history.length,
+        itemBuilder: (context, index, animation) {
+          final pair = appState.history[index];
+          return SizeTransition(
+              sizeFactor: animation,
+              child: Center(
+                child: TextButton.icon(
+                  icon: appState.favorites.contains(pair)
+                      ? const Icon(
+                          Icons.favorite,
+                          size: 12,
+                        )
+                      : const SizedBox(),
+                  label: Text(
+                    pair.asLowerCase,
+                    semanticsLabel: pair.asPascalCase,
+                  ),
+                  onPressed: () {
+                    appState.toggleFavorite(
+                      pair: pair,
+                    );
+                  },
+                ),
+              ));
+        },
       ),
     );
   }
@@ -203,10 +331,26 @@ class BigCard extends StatelessWidget {
       color: theme.colorScheme.primary,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Text(
-          pair.asLowerCase,
-          style: style,
-          semanticsLabel: "${pair.first} ${pair.second}",
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          child: MergeSemantics(
+            child: Wrap(
+              children: [
+                Text(
+                  pair.first,
+                  style: style.copyWith(
+                    fontWeight: FontWeight.w100,
+                  ),
+                ),
+                Text(
+                  pair.second,
+                  style: style.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -226,7 +370,11 @@ class FavouritePage extends StatelessWidget {
       return Column(
         children: [
           Expanded(
-            child: ListView(
+            child: GridView(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 600,
+                childAspectRatio: 600 / 300,
+              ),
               children: appState.favorites
                   .map(
                     (pair) => ListTile(
@@ -245,27 +393,70 @@ class FavouritePage extends StatelessWidget {
         ],
       );
     } else {
-      return EmptyView();
+      return const EmptyView();
     }
   }
 }
 
-class EmptyView extends StatelessWidget {
+class EmptyView extends StatefulWidget {
+  const EmptyView({super.key});
+
+  @override
+  State<EmptyView> createState() => _EmptyViewState();
+}
+
+class _EmptyViewState extends State<EmptyView> {
+  String? svgString;
+
+  String colorToHex(Color color) {
+    return '#${color.red.toRadixString(16).padLeft(2, '0')}${color.green.toRadixString(16).padLeft(2, '0')}${color.blue.toRadixString(16).padLeft(2, '0')}';
+  }
+
+  Future<void> _loadSvg(String newColor) async {
+    // Load the SVG file as a string
+    String rawSvg =
+        await rootBundle.loadString('svgs/undraw_no_data_re_kwbl.svg');
+
+    // Parse the SVG
+    var document = xml.XmlDocument.parse(rawSvg);
+
+    // Iterate through the elements and change the specific color
+    const String targetColor = '#6c63ff';
+    document.descendants.whereType<xml.XmlElement>().forEach((element) {
+      final String? fillColor = element.getAttribute('fill');
+      if (fillColor == targetColor) {
+        element.setAttribute('fill', newColor);
+      }
+    });
+
+    // Update the state with the modified SVG string
+    setState(() {
+      svgString = document.toXmlString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    if (svgString == null) {
+      String newColor = colorToHex(Theme.of(context).colorScheme.primary);
+      _loadSvg(newColor); // Pass the color hex string to the _loadSvg method
+    }
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.favorite_outline_rounded,
-            size: 100,
-          ),
-          SizedBox(
+          svgString != null
+              ? SvgPicture.string(
+                  svgString!,
+                  height: 250,
+                )
+              : const CircularProgressIndicator(),
+          const SizedBox(
             height: 10,
           ),
           Text(
-            "No Favorites",
+            "No Favorites yet!",
+            style: Theme.of(context).textTheme.displaySmall,
           ),
         ],
       ),
